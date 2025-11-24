@@ -1,0 +1,37 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Model files
+*.pth
+*.pkl
+*.npy
+
+# Data files
+*.csv
+*.txt
+*.zip
+
+# Documentation files
+*.md
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Output directories
+out/
+save/
+loss/
+para/
+
