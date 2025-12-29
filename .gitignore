@@ -14,6 +14,8 @@ __pycache__/
 *.csv
 *.txt
 *.zip
+*.tsv
+*.xlsx
 
 # Documentation files
 *.md
