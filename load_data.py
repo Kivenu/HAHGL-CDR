@@ -284,3 +284,241 @@ def LoadData_gdsc(Drug_info_file, Drug_feature_file, Cell_line_info_file, Genomi
     print('All %d pairs across %d cell lines and %d drugs.' % (len(data_new), nb_celllines, nb_drugs))
 
     return drug_feature, mutation_feature, gexpr_feature, methylation_feature, data_new, nb_celllines, nb_drugs
+
+
+def LoadData_tcga(Drug_info_file, Drug_feature_file, Drug_index_path, Genomic_mutation_path,
+                  Gene_expression_path, Methylation_path):
+    """
+    TCGA drug data loading function
+    Returns: drug_feature, mutation_feature, gexpr_feature, methylation_feature, data_new, nb_celllines, nb_drugs
+    """
+    print('Loading data (TCGA format)...')
+    reader = csv.reader(open(Drug_info_file, 'r'))
+    rows = [item for item in reader]
+    
+    print('1-loading drugs information')
+    # Build mapping from drug name to pubchem id [drugname->pubchemid]
+    # Drug_info_file: first column is drug_id, second column is Name, sixth column is PubCHEM
+    drugname2pubchemid = {}
+    for item in rows[1:]:  # Skip header
+        if len(item) > 5 and item[5].isdigit():
+            drugname2pubchemid[item[1]] = item[5]  # Name -> PubCHEM
+    
+    # Load drug molecular graph feature and convert to 3-element format
+    drug_pubchem_id_set = []
+    drug_feature = {}
+    for each in os.listdir(Drug_feature_file):
+        drug_pubchem_id_set.append(each.split('.')[0])
+        pkl_file = open('%s/%s' % (Drug_feature_file, each), 'rb')
+        # Original pkl format: (feat_mat, adj_list, degree_list, bond_matrix)
+        feat_mat, adj_list, degree_list, bond_matrix = pickle.load(pkl_file)
+        # Convert to 3-element format: [feat_mat, adj_list, degree_list] - remove bond_matrix
+        drug_feature[each.split('.')[0]] = [feat_mat, adj_list, degree_list]
+    assert len(drug_pubchem_id_set) == len(drug_feature.values())
+    
+    print('2-loading response information and collecting all samples')
+    # Collect all response data from TCGA_response.*.tsv files
+    # Format: first column is sample, fourth column is drug, fifth column is response (R/S)
+    all_samples = set()
+    all_drugs = set()
+    response_data_dict = {}  # {(sample, drug): response}
+    
+    # Find all TCGA_response.*.tsv files
+    response_files = [f for f in os.listdir(Drug_index_path) if f.startswith('TCGA_response.') and f.endswith('.tsv')]
+    
+    for response_file in response_files:
+        # Extract drug name from filename (TCGA_response.DrugName.tsv)
+        drug_name = response_file.replace('TCGA_response.', '').replace('.tsv', '')
+        
+        # Skip if drug not in drugname2pubchemid
+        if drug_name not in drugname2pubchemid:
+            print(f'Warning: Drug {drug_name} not found in Drug_info_file, skipping...')
+            continue
+        
+        pubchem_id = drugname2pubchemid[drug_name]
+        
+        # Skip if drug feature not available
+        if str(pubchem_id) not in drug_pubchem_id_set:
+            print(f'Warning: Drug {drug_name} (PubCHEM ID: {pubchem_id}) feature not available, skipping...')
+            continue
+        
+        # Read response file
+        response_df = pd.read_csv(os.path.join(Drug_index_path, response_file), sep='\t', header=0)
+        
+        for _, row in response_df.iterrows():
+            sample = row['sample']  # First column
+            drug_col = row['drug']  # Fourth column
+            response = row['response']  # Fifth column
+            
+            # Verify drug name matches
+            if drug_col != drug_name:
+                continue
+            
+            # Convert response: R -> -1 (resistant), S -> 1 (sensitive)
+            if response == 'R':
+                binary_response = -1
+            elif response == 'S':
+                binary_response = 1
+            else:
+                continue  # Skip invalid responses
+            
+            all_samples.add(sample)
+            all_drugs.add(pubchem_id)
+            response_data_dict[(sample, pubchem_id)] = binary_response
+    
+    print(f'Found {len(all_samples)} samples and {len(all_drugs)} drugs in response files')
+    
+    print('3-loading omics information')
+    # Load omics data for each drug
+    # Group samples by drug to load corresponding omics files
+    samples_by_drug = {}  # {pubchem_id: [sample1, sample2, ...]}
+    
+    for (sample, pubchem_id), response in response_data_dict.items():
+        if pubchem_id not in samples_by_drug:
+            samples_by_drug[pubchem_id] = []
+        samples_by_drug[pubchem_id].append(sample)
+    
+    # Collect all unique samples across all drugs
+    all_unique_samples = set()
+    for samples in samples_by_drug.values():
+        all_unique_samples.update(samples)
+    all_unique_samples = sorted(list(all_unique_samples))
+    
+    # Initialize omics feature dictionaries
+    mutation_features_dict = {}  # {pubchem_id: DataFrame}
+    gexpr_features_dict = {}  # {pubchem_id: DataFrame}
+    methylation_features_dict = {}  # {pubchem_id: DataFrame}
+    
+    # Load omics data for each drug
+    for pubchem_id, samples in samples_by_drug.items():
+        # Find corresponding drug name
+        drug_name = None
+        for name, pid in drugname2pubchemid.items():
+            if pid == pubchem_id:
+                drug_name = name
+                break
+        
+        if drug_name is None:
+            continue
+        
+        # Load mutation file: TCGA_mutations.DrugName.tsv
+        mutation_file = os.path.join(Genomic_mutation_path, f'TCGA_mutations.{drug_name}.tsv')
+        if os.path.exists(mutation_file):
+            mut_df = pd.read_csv(mutation_file, sep='\t', header=0, index_col=0)
+            # Transpose so samples are rows and features are columns
+            mut_df = mut_df.T
+            # Filter to only include samples in current drug's response data that exist in the DataFrame
+            available_samples = [s for s in samples if s in mut_df.index]
+            if len(available_samples) > 0:
+                mut_df = mut_df.loc[available_samples]
+                mutation_features_dict[pubchem_id] = mut_df
+        
+        # Load expression file: TCGA_exprs.z.DrugName.tsv
+        gexpr_file = os.path.join(Gene_expression_path, f'TCGA_exprs.z.{drug_name}.tsv')
+        if os.path.exists(gexpr_file):
+            gexpr_df = pd.read_csv(gexpr_file, sep='\t', header=0, index_col=0)
+            # Transpose so samples are rows and features are columns
+            gexpr_df = gexpr_df.T
+            # Filter to only include samples in current drug's response data that exist in the DataFrame
+            available_samples = [s for s in samples if s in gexpr_df.index]
+            if len(available_samples) > 0:
+                gexpr_df = gexpr_df.loc[available_samples]
+                gexpr_features_dict[pubchem_id] = gexpr_df
+        
+        # Load methylation file: TCGA_methylation_DrugName.tsv
+        methylation_file = os.path.join(Methylation_path, f'TCGA_methylation_{drug_name}.tsv')
+        if os.path.exists(methylation_file):
+            methy_df = pd.read_csv(methylation_file, sep='\t', header=0, index_col=0)
+            # Transpose so samples are rows and features are columns
+            methy_df = methy_df.T
+            # Filter to only include samples in current drug's response data that exist in the DataFrame
+            available_samples = [s for s in samples if s in methy_df.index]
+            if len(available_samples) > 0:
+                methy_df = methy_df.loc[available_samples]
+                methylation_features_dict[pubchem_id] = methy_df
+    
+    # Combine omics data across all drugs
+    # Find common features across all drugs for each omics type
+    print('4-combining omics data across all drugs')
+    
+    # Get all mutation features
+    all_mut_features = set()
+    for mut_df in mutation_features_dict.values():
+        all_mut_features.update(mut_df.columns)
+    all_mut_features = sorted(list(all_mut_features))
+    
+    # Get all expression features
+    all_gexpr_features = set()
+    for gexpr_df in gexpr_features_dict.values():
+        all_gexpr_features.update(gexpr_df.columns)
+    all_gexpr_features = sorted(list(all_gexpr_features))
+    
+    # Get all methylation features
+    all_methy_features = set()
+    for methy_df in methylation_features_dict.values():
+        all_methy_features.update(methy_df.columns)
+    all_methy_features = sorted(list(all_methy_features))
+    
+    # Build combined DataFrames
+    mutation_feature = pd.DataFrame(index=all_unique_samples, columns=all_mut_features, dtype=float)
+    gexpr_feature = pd.DataFrame(index=all_unique_samples, columns=all_gexpr_features, dtype=float)
+    methylation_feature = pd.DataFrame(index=all_unique_samples, columns=all_methy_features, dtype=float)
+    
+    # Fill in data from each drug's omics files
+    for pubchem_id in samples_by_drug.keys():
+        samples = samples_by_drug[pubchem_id]
+        
+        if pubchem_id in mutation_features_dict:
+            mut_df = mutation_features_dict[pubchem_id]
+            for sample in samples:
+                if sample in mut_df.index:
+                    mutation_feature.loc[sample, mut_df.columns] = mut_df.loc[sample]
+        
+        if pubchem_id in gexpr_features_dict:
+            gexpr_df = gexpr_features_dict[pubchem_id]
+            for sample in samples:
+                if sample in gexpr_df.index:
+                    gexpr_feature.loc[sample, gexpr_df.columns] = gexpr_df.loc[sample]
+        
+        if pubchem_id in methylation_features_dict:
+            methy_df = methylation_features_dict[pubchem_id]
+            for sample in samples:
+                if sample in methy_df.index:
+                    methylation_feature.loc[sample, methy_df.columns] = methy_df.loc[sample]
+    
+    # Fill NaN values with 0
+    mutation_feature = mutation_feature.fillna(0)
+    gexpr_feature = gexpr_feature.fillna(0)
+    methylation_feature = methylation_feature.fillna(0)
+    
+    # Ensure all three omics have the same samples
+    common_samples = set(mutation_feature.index) & set(gexpr_feature.index) & set(methylation_feature.index)
+    mutation_feature = mutation_feature.loc[list(common_samples)]
+    gexpr_feature = gexpr_feature.loc[list(common_samples)]
+    methylation_feature = methylation_feature.loc[list(common_samples)]
+    
+    assert mutation_feature.shape[0] == gexpr_feature.shape[0] == methylation_feature.shape[0]
+    
+    print('5-building response pairs')
+    # Build data_new list: (sample, pubchem_id, response)
+    data_new = []
+    for (sample, pubchem_id), response in response_data_dict.items():
+        # Only include samples that have all omics data
+        if sample in common_samples and str(pubchem_id) in drug_pubchem_id_set:
+            data_new.append([sample, pubchem_id, response])
+    
+    # Eliminate ambiguity responses (keep first occurrence when same sample-drug pair has different responses)
+    data_sort = sorted(data_new, key=(lambda x: [x[0], x[1], x[2]]), reverse=True)
+    data_tmp = []
+    data_new_clean = []
+    data_idx1 = [[i[0], i[1]] for i in data_sort]
+    for i, k in zip(data_idx1, data_sort):
+        if i not in data_tmp:
+            data_tmp.append(i)
+            data_new_clean.append(k)
+    
+    nb_celllines = len(set([item[0] for item in data_new_clean]))
+    nb_drugs = len(set([item[1] for item in data_new_clean]))
+    print('All %d pairs across %d samples and %d drugs.' % (len(data_new_clean), nb_celllines, nb_drugs))
+    
+    return drug_feature, mutation_feature, gexpr_feature, methylation_feature, data_new_clean, nb_celllines, nb_drugs
