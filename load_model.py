@@ -233,7 +233,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate trained model performance on test set")
     
     # Model and dataset arguments
-    parser.add_argument('--model_path', type=str, default='save/HAHGL_CDR_GDSC_results_seed2024_repeat1_fold1.pth', help='Path to model weight file')
+    parser.add_argument('--model_path', type=str, default='save/HAHGL_CDR_GDSC_results_seed2024_repeat0_fold0.pth', help='Path to model weight file')
     parser.add_argument('--dataset', type=str, default='gdsc', choices=['gdsc', 'ccle'], help='Dataset name (gdsc or ccle)')
     parser.add_argument('--seed', type=int, default=2024, help='Random seed')
     parser.add_argument('--repeat', type=int, default=0, help='Repeat number (0-based, same as target_repeat in training)')
