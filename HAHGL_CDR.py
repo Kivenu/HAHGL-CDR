@@ -12,8 +12,29 @@ from myutils import torch_corr_x_y, scale_sigmoid, build_incidence_matrix_from_e
 
 
 # ========== FeatureExtraction ==========
+def calculate_mutation_output_dim(dim_mutation):
+    """
+    Calculate the output dimension after mutation convolution and pooling layers.
+    Formula:
+    - conv1: (dim_mutation - 700) // 5 + 1
+    - pool1: ((dim_mutation - 700) // 5 + 1) // 5
+    - conv2: ((((dim_mutation - 700) // 5 + 1) // 5) - 5) // 2 + 1
+    - pool2: (((((dim_mutation - 700) // 5 + 1) // 5) - 5) // 2 + 1) // 10
+    - flatten: 30 * (((((dim_mutation - 700) // 5 + 1) // 5) - 5) // 2 + 1) // 10
+    """
+    # conv1 output: (dim_mutation - 700) // 5 + 1
+    conv1_out = (dim_mutation - 700) // 5 + 1
+    # pool1 output: conv1_out // 5
+    pool1_out = conv1_out // 5
+    # conv2 output: (pool1_out - 5) // 2 + 1
+    conv2_out = (pool1_out - 5) // 2 + 1
+    # pool2 output: conv2_out // 10
+    pool2_out = conv2_out // 10
+    # flatten output: 30 * pool2_out (30 is the number of output channels from conv2)
+    return 30 * pool2_out
+
 class Multi_Omics_Ada_Hypergraph_Fusion(nn.Module):
-    def __init__(self, dim_drug, drug_layer, dim_gexp, dim_methy, dim_feat, k, num_layers, dropout, use_bn_at, negative_slope, threshold, device, omics_num_layers=1, tau=10.0):
+    def __init__(self, dim_drug, drug_layer, dim_gexp, dim_methy, dim_mutation, dim_feat, k, num_layers, dropout, use_bn_at, negative_slope, threshold, device, omics_num_layers=1, tau=10.0):
         super(Multi_Omics_Ada_Hypergraph_Fusion, self).__init__()
         self.device = device
         self.dropout = dropout
@@ -45,10 +66,12 @@ class Multi_Omics_Ada_Hypergraph_Fusion(nn.Module):
         self.mut_cov1 = nn.Conv2d(1, 50, (1, 700), stride=(1, 5))
         self.mut_cov2 = nn.Conv2d(50, 30, (1, 5), stride=(1, 2))
         self.mut_fla = nn.Flatten()
-        self.mut_fc = nn.Linear(2010, dim_feat)
+        # Calculate mutation output dimension dynamically
+        mut_output_dim = calculate_mutation_output_dim(dim_mutation)
+        self.mut_fc = nn.Linear(mut_output_dim, dim_feat)
         self.batch_mut1 = nn.BatchNorm2d(50)
         self.batch_mut2 = nn.BatchNorm2d(30)
-        self.batch_mut3 = nn.BatchNorm1d(2010)
+        self.batch_mut3 = nn.BatchNorm1d(mut_output_dim)
         
         # Edge feature projection layers (for computing initial edge features)
         self.edge_projection_mut = nn.Linear(dim_feat, dim_feat)
@@ -213,9 +236,9 @@ class Hetero_Ada_Hypergraph_Learning(nn.Module):
         return x_sen_adaptive_mapped, x_out
 
 class HAHGL_CDR(nn.Module):
-    def __init__(self, dim_drug, drug_layer, dim_gexp, dim_methy, dim_feat, out_channels, k, num_layers, dropout, use_bn_at, use_bn_as, negative_slope, device, alpha=8, num_pipe_nodes=10, threshold=0.8, omics_num_layers=1, tau=10.0):
+    def __init__(self, dim_drug, drug_layer, dim_gexp, dim_methy, dim_mutation, dim_feat, out_channels, k, num_layers, dropout, use_bn_at, use_bn_as, negative_slope, device, alpha=8, num_pipe_nodes=10, threshold=0.8, omics_num_layers=1, tau=10.0):
         super().__init__()
-        self.branch_at = Multi_Omics_Ada_Hypergraph_Fusion(dim_drug, drug_layer, dim_gexp, dim_methy, dim_feat, k, num_layers, dropout, use_bn_at, negative_slope, threshold, device, omics_num_layers=omics_num_layers, tau=tau)
+        self.branch_at = Multi_Omics_Ada_Hypergraph_Fusion(dim_drug, drug_layer, dim_gexp, dim_methy, dim_mutation, dim_feat, k, num_layers, dropout, use_bn_at, negative_slope, threshold, device, omics_num_layers=omics_num_layers, tau=tau)
         self.branch_as = Hetero_Ada_Hypergraph_Learning(dim_feat, out_channels, out_channels, use_bn_as, negative_slope, device, num_layers, dropout, num_pipe_nodes=num_pipe_nodes, threshold=threshold, tau=tau)
         self.alpha = alpha
     

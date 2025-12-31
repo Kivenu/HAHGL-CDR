@@ -102,6 +102,7 @@ def evaluate_model(args):
     model = HAHGL_CDR(
         dim_drug=atom_shape, drug_layer=[256,256,256],
         dim_gexp=gexpr_feature.shape[1], dim_methy=methylation_feature.shape[1],
+        dim_mutation=mutation_feature.shape[1],
         dim_feat=args.dim_feat, out_channels=100, k=args.k, 
         num_layers=args.num_layers,
         dropout=args.dropout, use_bn_at=True, use_bn_as=True,
