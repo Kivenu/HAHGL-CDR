@@ -6,12 +6,12 @@ HAHGL-CDR: Heterogeneous adaptive hypergraph learning for cancer drug response p
 
 - [Overview](#Overview)
 - [Requirements](#Requirements)
-  - [Win-64 or Linux with CUDA](#Win-64 or Linux with CUDA11.2)
-  - [MacOS or CPU only](#MacOS or CPU only)
 - [Data preparation](#Data preparation)
   - [GDSC and CCLE](#GDSC and CCLE)
   - [TCGA](#External validation on TCGA)
 - [Usage of HAHGL-CDR](#Usage of HAHGL-CDR)
+
+
 
 ![Introduction](Assets/intro.png)
 
@@ -183,7 +183,7 @@ data/
 
 ### External validation on TCGA
 
-We also provided the 可选的数据集 TCGA, 提供了external clinical patient data downloaded from [Firehose Broad GDAC](http://gdac.broadinstitute.org/runs/stddata__2016_01_28/). 在`data/TCGA/`目录中我们提供了预处理的病人的三种组学特征(mut, gen, and met) 以及与药物的反应记录. 预处理的方法参考之前的工作 [Noghabi et al.](https://doi.org/10.1093/bioinformatics/btz318), and [Ding et al.](https://doi.org/10.1093/bioinformatics/btw344). 
+We also provide the optional TCGA dataset, which includes external clinical patient data downloaded from [Firehose Broad GDAC](http://gdac.broadinstitute.org/runs/stddata__2016_01_28/). In the `data/TCGA/` directory, we provide preprocessed patient multi-omics features (mut, gen, and met) along with drug response records. The preprocessing methods follow previous studies [Sharifi-Noghabi et al.](https://doi.org/10.1093/bioinformatics/btz318) and [Ding et al.](https://doi.org/10.1093/bioinformatics/btw344).
 
 ## Usage of HAHGL-CDR
 
