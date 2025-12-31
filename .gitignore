@@ -18,6 +18,7 @@ data/
 
 # Documentation files
 *.md
+!README.md
 
 # IDE files
 .vscode/
