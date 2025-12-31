@@ -37,3 +37,4 @@ save/
 loss/
 para/
 
+external_validation.py
