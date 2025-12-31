@@ -6,11 +6,11 @@ __pycache__/
 .Python
 
 # Model files
-*.pth
 *.pkl
 *.npy
 
 # Data files
+data/
 *.csv
 *.txt
 *.tsv
@@ -32,7 +32,6 @@ Thumbs.db
 
 # Output directories
 out/
-save/
 loss/
 para/
 
