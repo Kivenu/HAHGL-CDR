@@ -4,15 +4,6 @@
 
 HAHGL-CDR: Heterogeneous adaptive hypergraph learning for cancer drug response prediction
 
-- [Overview](#Overview)
-- [Requirements](#Requirements)
-- [Data preparation](#Data preparation)
-  - [GDSC and CCLE](#GDSC and CCLE)
-  - [TCGA](#External validation on TCGA)
-- [Usage of HAHGL-CDR](#Usage of HAHGL-CDR)
-
-
-
 ![Introduction](Assets/intro.png)
 
 ## Requirements
