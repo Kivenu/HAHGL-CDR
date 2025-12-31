@@ -6,7 +6,7 @@ HAHGL-CDR: Heterogeneous adaptive hypergraph learning for cancer drug response p
 
 - [Overview](#Overview)
 - [Requirements](#Requirements)
-  - [Win-64 or Linux with CUDA](#Win-64 and Linux with CUDA11.2)
+  - [Win-64 or Linux with CUDA](#Win-64 or Linux with CUDA11.2)
   - [MacOS or CPU only](#MacOS or CPU only)
 - [Data preparation](#Data preparation)
   - [GDSC and CCLE](#GDSC and CCLE)
