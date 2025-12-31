@@ -13,7 +13,6 @@ __pycache__/
 # Data files
 *.csv
 *.txt
-*.zip
 *.tsv
 *.xlsx
 
@@ -37,3 +36,5 @@ save/
 loss/
 para/
 
+external_validation.py
+data/Drug/drug_graph_feat.zip
