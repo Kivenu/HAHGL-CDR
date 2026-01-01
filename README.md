@@ -193,3 +193,10 @@ We also provide the optional TCGA dataset, which includes external clinical pati
   ```
 
 ![The result of HAHGL-CDR on the GDSC and CCLE dataset.](Assets/evaluation.jpeg)
+
+## Acknowledgments
+
+This work has received generous support and valuable contributions from funders and allies, **with special thanks to my advisor and my collaborators**, as well as all contributors who supported the development of HAHGL-CDR:
+
+![Acknowledgments for contributors.](Assets/acknowledgments.png)
+
