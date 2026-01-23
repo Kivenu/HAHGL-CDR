@@ -8,7 +8,7 @@ HAHGL-CDR: Heterogeneous adaptive hypergraph learning for cancer drug response p
 
 ## Requirements
 
-The provided environment configuration is designed to be compatible with [GraphCDR](https://github.com/BioMedicalBigDataMiningLab/GraphCDR), [RedCDR](https://github.com/mhxu1998/RedCDR), and [DeepCDR](https://github.com/kimmo1019/DeepCDR?tab=readme-ov-file).
+The provided step-by-step environment configuration is designed to be compatible with [GraphCDR](https://github.com/BioMedicalBigDataMiningLab/GraphCDR), [RedCDR](https://github.com/mhxu1998/RedCDR), and [DeepCDR](https://github.com/kimmo1019/DeepCDR?tab=readme-ov-file).
 
 ### Win-64 or Linux with CUDA11.2
 
@@ -110,7 +110,7 @@ pip install dill 0.4.0 numpy 1.18.5 pandas 1.1.5
 
 ### GDSC and CCLE
 
-**Please unzip the data file `data.zip`.** We evaluate HAHGL-CDR on two datasets, GDSC and CCLE, which are retrieved from [RedCDR](https://github.com/mhxu1998/RedCDR). The `data` directory structure and file formats are detailed as follows:
+**Please unzip the data file `data.zip`.** We evaluate HAHGL-CDR on two datasets, the GDSC and CCLE, which are retrieved from [RedCDR](https://github.com/mhxu1998/RedCDR). The `data` directory structure and file formats are detailed as follows:
 
 ```
 data/
